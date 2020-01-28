@@ -1,10 +1,16 @@
 extern crate rand;
 
-use rand::Rng;
+use rand::distributions::{Distribution, Uniform};
 
 fn main() {
     let mut rng = rand::thread_rng();
-
-    println!("Integer : {}", rng.gen_range(0, 10));
-    println!("Float : {}", rng.gen_range(0.0,10.0));
+    let die = Uniform::from(0..7);
+    loop {
+        // println!("{:?}", &mut rng);
+        let throw = die.sample(&mut rng);
+        println!("Roll the dice : {}", throw);
+        if throw == 6 {
+            break;
+        }
+    }
 }
