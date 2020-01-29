@@ -1,6 +1,39 @@
-fn main() {
-    let mut vec = vec![1.1, 5.32, 10.1222, 2.2, 15.6, 2.0];
+#[derive(Debug, Ord, Eq, PartialEq, PartialOrd)]
+struct Person {
+    name: String,
+    age: u32,
+}
 
-    vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    assert!(vec == vec![1.1, 2.0, 2.2, 5.32, 10.1222, 15.6]);
+impl Person {
+    pub fn new(name: String, age: u32) -> Self {
+        Person { name, age }
+    }
+}
+
+fn main() {
+    let mut people = vec![
+        Person::new("John".to_string(), 10),
+        Person::new("Pet".to_string(), 30),
+        Person::new("Al".to_string(), 1),
+    ];
+
+    people.sort();
+    assert_eq!(
+        people,
+        vec![
+            Person::new("Al".to_string(), 1),
+            Person::new("John".to_string(), 10),
+            Person::new("Pet".to_string(), 30),
+        ]
+    );
+
+    people.sort_by(|a, b| b.age.cmp(&a.age));
+    assert_eq!(
+        people,
+        vec![
+            Person::new("Pet".to_string(), 30),
+            Person::new("John".to_string(), 10),
+            Person::new("Al".to_string(), 1),
+        ]
+    );
 }
