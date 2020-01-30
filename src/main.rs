@@ -1,39 +1,36 @@
-#[derive(Debug, Ord, Eq, PartialEq, PartialOrd)]
-struct Person {
-    name: String,
-    age: u32,
-}
+extern crate clap;
 
-impl Person {
-    pub fn new(name: String, age: u32) -> Self {
-        Person { name, age }
-    }
-}
+use clap::{App, Arg};
 
 fn main() {
-    let mut people = vec![
-        Person::new("John".to_string(), 10),
-        Person::new("Pet".to_string(), 30),
-        Person::new("Al".to_string(), 1),
-    ];
+    let matches = App::new("My test Program")
+        .version("0.0.1")
+        .author("Mehrad Kavian")
+        .about("Some stupid command line App")
+        .arg(
+            Arg::with_name("multiply")
+                .short("m")
+                .long("mul")
+                .takes_value(true)
+                .help("received two number and multiplies them"),
+        )
+        .arg(
+            Arg::with_name("number")
+                .short("n")
+                .long("num")
+                .takes_value(true)
+                .help("your fucking favorite number you mother bitch"),
+        )
+        .get_matches();
 
-    people.sort();
-    assert_eq!(
-        people,
-        vec![
-            Person::new("Al".to_string(), 1),
-            Person::new("John".to_string(), 10),
-            Person::new("Pet".to_string(), 30),
-        ]
-    );
-
-    people.sort_by(|a, b| b.age.cmp(&a.age));
-    assert_eq!(
-        people,
-        vec![
-            Person::new("Pet".to_string(), 30),
-            Person::new("John".to_string(), 10),
-            Person::new("Al".to_string(), 1),
-        ]
-    );
+    let numbers = matches.value_of("multiply");
+    match numbers {
+        None => println!("You are supposed to provide a number you stupid monkey!"),
+        Some(s) => {
+            match s.parse::<i32>() {
+                Ok(n) => println!("{}", n),
+                Err(_) => println!("NOT A NUMBER STUPID FUCKING HORSE"),
+            }
+        }
+    }
 }
