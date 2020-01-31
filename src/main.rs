@@ -12,6 +12,7 @@ fn main() {
                 .short("m")
                 .long("mul")
                 .takes_value(true)
+                .number_of_values(2)
                 .help("received two number and multiplies them"),
         )
         .arg(
@@ -23,14 +24,6 @@ fn main() {
         )
         .get_matches();
 
-    let numbers = matches.value_of("multiply");
-    match numbers {
-        None => println!("You are supposed to provide a number you stupid monkey!"),
-        Some(s) => {
-            match s.parse::<i32>() {
-                Ok(n) => println!("{}", n),
-                Err(_) => println!("NOT A NUMBER STUPID FUCKING HORSE"),
-            }
-        }
-    }
+    let numbers :Vec<&str> = matches.values_of("multiply").unwrap().collect();
+    println!("{:?}", numbers);
 }
