@@ -1,9 +1,7 @@
 extern crate ansi_term;
-use ansi_term::Color;
+use ansi_term::Style;
 
 fn main() {
-    println!("This is {} in color, {} in color, {} in color",
-    Color::Red.blink().paint("RED"),
-    Color::Green.bold().underline().italic().paint("GREEN"),
-    Color::Blue.bold().paint("BLUE"));
+    println!(
+        "{} and this is not", Style::new().bold().paint("This is bold"));
 }
