@@ -1,9 +1,17 @@
-extern crate ansi_term;
-use ansi_term::{Color, Style};
+extern crate flate2;
+extern crate tar;
 
-fn main() {
-    println!("{},{} and {}",
-    Color::Yellow.paint("This is Colored"),
-    Style::new().bold().paint("This is only Bold"),
-    Color::Yellow.bold().paint("This is bold and colored"));
+use std::fs::File;
+use flate2::read::GzDecoder;
+use tar::Archive;
+
+fn main() -> Result<(), std::io::Error> {
+    let path = "archive.tar.gz";
+
+    let tar_gz = File::open(path)?;
+    let tar = GzDecoder::new(tar_gz);
+    let mut archive = Archive::new(tar);
+    archive.unpack(".")?;
+
+    Ok(())
 }
