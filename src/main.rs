@@ -1,36 +1,27 @@
-#[macro_use]
-extern crate error_chain;
-extern crate flate2;
-extern crate tar;
+extern crate crossbeam;
 
-use flate2::read::GzDecoder;
-use std::fs::File;
-
-use std::path::PathBuf;
-use tar::Archive;
-
-error_chain! {
-    foreign_links {
-      Io(std::io::Error);
-      StripPrefixError(::std::path::StripPrefixError);
-    }
+fn main() {
+    let arr = &[1, 35, -4, 10];
+    let max = find_max(arr);
+    assert_eq!(max, Some(35));
 }
 
-fn main() -> Result<()> {
-    let file = File::open("archive.tar.gz")?;
-    let mut archive = Archive::new(GzDecoder::new(file));
-    let prefix = "backup/logs";
+fn find_max(arr: &[i32]) -> Option<i32> {
+    const THRESHOLD: usize = 2;
 
-    let ent = archive
-        .entries()?
-        .filter_map(|e| e.ok())
-        .map(|mut entry| -> Result<PathBuf> {
-            let path = entry.path()?.strip_prefix(prefix)?.to_owned();
-            entry.unpack(&path)?;
-            Ok(path)
-        })
-        .filter_map(|e| e.ok())
-        .for_each(|x| println!("> {}", x.display()));
+    if (arr.len() <= THRESHOLD) {
+        return arr.iter().cloned().max();
+    }
+    let mid = arr.len() / 2;
+    let (left, right) = arr.split_at(mid);
 
-    Ok(())
+    crossbeam::scope(|s| {
+        let thread_l = s.spawn(|_| find_max(left));
+        let thread_r = s.spawn(|_| find_max(right));
+
+        let max_l = thread_l.join().unwrap()?;
+        let max_r = thread_r.join().unwrap()?;
+
+        Some(max_l.max(max_r))
+    }).unwrap()
 }
