@@ -1,29 +1,58 @@
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate lazy_static;
+extern crate walkdir;
+extern crate ring;
+extern crate num_cpus;
+extern crate threadpool;
 
-use std::sync::Mutex;
-error_chain!{ }
+use walkdir::WalkDir;
+use std::fs::File;
+use std::io::{BufReader,Read,Error};
+use std::path::Path;
+use threadpool::ThreadPool;
+use std::sync::mpsc::channel;
+use ring::digest::{Context, Digest, SHA256};
 
-lazy_static! {
-    static ref FRUIT: Mutex<Vec<String>> = Mutex::new(Vec::new());
-}
-
-fn insert(fruit : &str) -> Result<()> {
-    let mut db = FRUIT.lock().map_err(|_| "Failed to acquire MutexGuard")?;
-    db.push(fruit.to_string());
-    Ok(())
-}
-
-fn main() -> Result<()> {
-    insert("Apple")?;
-    insert("orange")?;
-    insert("peach")?;
-    {
-        let db = FRUIT.lock().map_err(|_| "Failed to acuire MutexGaurd")?;
-        db.iter().enumerate().for_each(|(i, item)| println!("{}: {}", i, item));
+fn is_iso (entry: &Path) -> bool {
+    match entry.extension() {
+        Some(e) if e.to_string_lossy().to_lowercase() == "iso" => true,
+        _ => false,
     }
-    insert("GRAPE")?;
+}
+
+fn compute_digest<P: AsRef<Path>>(filepath: P) -> Result<(Digest, P), Error> {
+    let mut buf_reader = BufReader::new(File::open(&filepath)?);
+    let mut context = Context::new(&SHA256);
+    let mut buffer= [0; 1024];
+
+    loop {
+        let count = buf_reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        context.update(&buffer[..count]);
+    }
+    Ok((context.finish(), filepath))
+}
+
+fn main() -> Result<(), Error> {
+    let pool = ThreadPool::new(num_cpus::get());
+    let (tx,rx) = channel();
+
+    for entry in WalkDir::new("./")
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| !e.path().is_dir() && is_iso(e.path())) {
+            let path  = entry.path().to_owned();
+            let tx = tx.clone();
+            pool.execute(move || {
+                let digest = compute_digest(path);
+                tx.send(digest).expect("Cound not send Data!");
+            });
+        }
+    drop(tx);
+    for t in rx.iter() {
+        let (sha, path) = t?;
+        println!("{:?} {:?}",sha,path);
+    }
     Ok(())
 }
