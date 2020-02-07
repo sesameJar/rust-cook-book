@@ -1,13 +1,16 @@
 extern crate rayon;
+extern crate rand;
 
+use rand::{Rng, thread_rng};
+use rand::distributions::Alphanumeric;
 use rayon::prelude::*;
 
 fn main() {
-    let mut vec = vec![6,2,1,9,3,8,11];
-    let f1 = vec.par_iter().find_any(|&&n| n==9);
-    let f2 = vec.par_iter().find_any(|&&n| n % 2 ==0 && n > 6);
-    let f3 = vec.par_iter().find_any(|&&n| n >8);
-    assert_eq!(f1, Some(&9));
-    assert_eq!(f2, Some(&8));
-    assert!(f3 > Some(&8));
+    let mut vec = vec![String::new(); 100];
+    vec.par_iter_mut().for_each(|p| {
+        let mut rng = thread_rng();
+        *p = (0..5).map(|_| rng.sample(&Alphanumeric)).collect()
+    });
+    vec.par_sort_unstable();
+    println!("{:? }",vec);
 }
