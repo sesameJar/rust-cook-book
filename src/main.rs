@@ -1,36 +1,63 @@
+#[macro_use]
+extern crate error_chain;
+extern crate glob;
+extern crate image;
 extern crate rayon;
 
+use std::fs::create_dir_all;
+use std::path::Path;
+
+use error_chain::ChainedError;
+use glob::{glob_with, MatchOptions};
+use image::{FilterType, ImageError};
 use rayon::prelude::*;
 
-struct Person {
-    age : u32,
+error_chain! {
+    foreign_links {
+        Image(ImageError);
+        Io(std::io::Error);
+        Glob(glob::PatternError);
+    }
 }
 
-fn main() {
-    let v : Vec<Person> = vec![
-        Person { age: 23 },
-        Person { age: 19 },
-        Person { age: 42 },
-        Person { age: 17 },
-        Person { age: 17 },
-        Person { age: 31 },
-        Person { age: 30 },
-    ];
-    let num_over_30 = v.par_iter().filter(|&n| n.age> 30).count() as f32;
-    let sum_over_30 = v.par_iter().
-    map(|n| n.age)
-    .filter(|&x| x > 30)
-    .reduce(|| 0,|x,y| x+y);
+fn main() -> Result<()> {
+    let options: MatchOptions = Default::default();
+    let files: Vec<_> = glob_with("./images/*.jpg", options)?
+        .filter_map(|x| x.ok())
+        .collect();
 
-    let alt_sum_30: u32 = v.par_iter()
-        .map(|x| x.age)
-        .filter(|&x| x> 30)
-        .sum();
+    if files.len() == 0 {
+        bail!("No fucking JPG file dumbass");
+    }
 
-    let avg_over_30 = sum_over_30 as f32 / num_over_30;
-    let alt_avg_over_30 = alt_sum_30 as f32/ num_over_30;
+    let thumb_dir = "images/thumbnails";
+    create_dir_all(thumb_dir)?;
+    println!("Saving {} thumbnails into '{}'...", files.len(), thumb_dir);
 
-    assert!((avg_over_30 - alt_avg_over_30).abs() < std::f32::EPSILON);
-    println!("The average age of people older than 30 is {}", (avg_over_30 ) );
+    let image_failures : Vec<_> = files
+    .par_iter()
+    .map(|path| {
+        make_thumbnail(path, thumb_dir, 300)
+        .map_err(|e| e.chain_err(|| path.display().to_string()))
+    })
+    .filter_map(|x| x.err())
+    .collect();
+
+    image_failures.iter().for_each(|x| println!("{}", x.display_chain()));
+    println!("{} thumbnails save successfully", files.len() - image_failures.len());
+
+    Ok(())
     
+}
+
+fn make_thumbnail<PA, PB>(original: PA, thumb_dir: PB, longest_edge: u32) -> Result<()>
+where
+    PA: AsRef<Path>,
+    PB: AsRef<Path>,
+{
+    let img = image::open(original.as_ref())?;
+    let file_path = thumb_dir.as_ref().join(original);
+
+    Ok(img.resize(longest_edge, longest_edge, FilterType::Nearest)
+        .save(file_path)?)
 }
