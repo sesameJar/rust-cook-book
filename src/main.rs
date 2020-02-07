@@ -3,12 +3,12 @@ extern crate rayon;
 use rayon::prelude::*;
 
 fn main() {
-    let mut vec = vec![2, 4, 6, 8];
-    println!("{}", vec.par_iter().all(|n| (n % 2) == 0));
-    // print!("{}", vec.par_iter().all(|n| &n <= 8));
-
-    vec.push(9);
-
-    println!("{}",vec.par_iter().all(|n|(n%2)==0));
-    println!("{}", vec.par_iter().all(|n| *n <=8));
+    let mut vec = vec![6,2,1,9,3,8,11];
+    let f1 = vec.par_iter().find_any(|&&n| n==9);
+    let f2 = vec.par_iter().find_any(|&&n| n % 2 ==0 && n > 6);
+    let f3 = vec.par_iter().find_any(|&&n| n >8);
+    println!("{:?}", f1);
+    println!("{:?}", f2);
+    println!("{:?}", f3);
+    
 }
