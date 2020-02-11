@@ -1,21 +1,32 @@
 extern crate data_encoding;
 extern crate ring;
 
+use data_encoding::HEXUPPER;
 use ring::error::Unspecified;
 use ring::rand::SecureRandom;
-use ring::{digest, hmac, rand};
-use data_encoding::HEXUPPER;
+use ring::{ pbkdf2, rand};
+use std::num::NonZeroU32;
 
-fn main() -> Result<(), Unspecified> {
-    let mut key_value = [0u8; 48];
+fn main () -> Result<(), Unspecified> {
+    let password= "NO WAY YOU CAN GUESS THIS BITCH!";
+    const CREDENTIAN_LEN : usize = ring::digest::SHA512_OUTPUT_LEN;
+    let n_iter = NonZeroU32::new(10).unwrap();
     let rng = rand::SystemRandom::new();
-    rng.fill(&mut key_value);
+    let mut salt = [0u8; CREDENTIAN_LEN];
 
-    let key = hmac::Key::new(hmac::HMAC_SHA256, &key_value);
-    let raw_sig = hmac::sign(&key, "HEY".as_bytes());
-    println!("{:?}", HEXUPPER.encode(raw_sig.as_ref()));
+    rng.fill(&mut salt);
 
-    hmac::verify(&key, "HEY".as_bytes(), &raw_sig.as_ref())?;
+    let mut hashed_pass = [0u8; CREDENTIAN_LEN];
+    pbkdf2::derive(pbkdf2::PBKDF2_HMAC_SHA512, n_iter, &salt, password.as_bytes(), &mut hashed_pass);
 
+    println!("SALT: {}", HEXUPPER.encode(&salt));
+    println!("PBKDF2 : {}", HEXUPPER.encode(&hashed_pass));
+
+    //lets Verify
+    let should_ok = pbkdf2::verify(pbkdf2::PBKDF2_HMAC_SHA512, n_iter, &salt, password.as_bytes(), &hashed_pass);
+    assert!(should_ok.is_ok());
+
+    let not_ok = pbkdf2::verify(pbkdf2::PBKDF2_HMAC_SHA512, n_iter, &salt, "SOME WRONG PASSWORD".as_bytes(), &hashed_pass);
+    assert!(!not_ok.is_ok());
     Ok(())
 }
